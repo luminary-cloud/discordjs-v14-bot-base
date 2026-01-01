@@ -35,15 +35,22 @@ cd discordjs-v14-bot-base
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the root of the project and add your bot token and client ID:
+Copy `.env.example` to `.env` and fill in your values:
 
 ```env
 # .env
-token=YOUR_BOT_TOKEN_HERE
-clientId=YOUR_CLIENT_ID_HERE
+token=YOUR_BOT_TOKEN
+clientId=YOUR_APPLICATION_CLIENT_ID
+COMMANDS_SCOPE=global
+# If using guild scope, set:
+# GUILD_ID=YOUR_GUILD_ID
+
+# MongoDB connection
+MONGO_URI=mongodb://localhost:27017/discord-bot
+NODE_ENV=development
 ```
 
-You can find these values in the [Discord Developer Portal](https://discord.com/developers/applications).
+You can find `token` and `clientId` in the [Discord Developer Portal](https://discord.com/developers/applications). Set `COMMANDS_SCOPE` to `guild` during development to avoid global registration delays; switch to `global` for production.
 
 ### 3. Install Dependencies
 
@@ -53,8 +60,42 @@ npm install
 
 ### 4. Run the Bot
 
-```bash
+````bash
 npm start
+
+For development with auto-reload:
+
+```bash
+npm run dev
+````
+
+> Note: When `COMMANDS_SCOPE=global`, registering commands can take up to an hour to propagate. Use `guild` scope for faster iteration.
+
+---
+
+## 🗃️ MongoDB Setup
+
+This base includes a minimal MongoDB setup using **Mongoose**.
+
+- Connection code: `src/database/connection.js`
+- Models folder: `src/database/models`
+
+Create your models in `src/database/models`:
+
+```js
+// src/database/models/User.js
+const { Schema, model } = require('mongoose');
+
+const userSchema = new Schema({
+  discordId: { type: String, index: true, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+module.exports = model('User', userSchema);
+```
+
+MongoDB connection is initialized before the bot logs in. If MongoDB is unavailable, the bot will continue to run but log the connection error.
+
 ```
 
 ---
@@ -62,20 +103,22 @@ npm start
 ## 🛠️ Project Structure
 
 ```
+
 src/
-  commands/        # Slash command files
-  components/      # Buttons, select menus, modals
-  events/          # Event handlers
-  functions/       # Handler logic
-  index.js         # Bot entry point
-.env               # Environment variables
+commands/ # Slash command files
+components/ # Buttons, select menus, modals
+events/ # Event handlers
+functions/ # Handler logic
+index.js # Bot entry point
+.env # Environment variables
+
 ```
 
 ---
 
 ## 📝 Contributing
 
-Contributions are always welcome!  
+Contributions are always welcome!
 If you have suggestions, feature requests, or bug fixes, feel free to open an [issue](https://github.com/minuscloud/discordjs-v14-bot-base/issues) or a pull request.
 
 ---
@@ -88,3 +131,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 > Made with ❤️ by cloud
 
+```
