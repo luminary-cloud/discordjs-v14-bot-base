@@ -1,22 +1,29 @@
-require("dotenv").config();
+require('dotenv').config();
 const { token } = process.env;
-const { Client, Collection, GatewayIntentBits } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
+const {
+  Client,
+  Collection,
+  GatewayIntentBits,
+  Options,
+} = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const { connectMongo, disconnectMongo } = require('./database/connection');
 
 // Check if the Discord bot token is provided in environment variables
 if (!token) {
-  throw new Error("Discord bot token is missing in environment variables.");
+  throw new Error('Discord bot token is missing in environment variables.');
 }
 
 // Create a new Discord client instance with required intents
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,           // For guild-related events
-    GatewayIntentBits.GuildMessages,    // For message events in guilds
-    GatewayIntentBits.MessageContent,   // For reading message content
-    GatewayIntentBits.GuildMembers,     // For member-related events
-  ],
+  intents: [GatewayIntentBits.Guilds],
+  makeCache: Options.cacheWithLimits({
+    MessageManager: 0,
+    GuildMemberManager: 0,
+    // Keep a small user cache to avoid repeated fetches for interactions
+    UserManager: { maxSize: 100 },
+  }),
 });
 
 // Initialize collections for commands and components
@@ -34,12 +41,12 @@ const loadFiles = (folderPath, filter) => {
 // Dynamically load all function files from the functions directory
 const initializeFunctions = async () => {
   try {
-    const functionsPath = path.join(__dirname, "functions");
+    const functionsPath = path.join(__dirname, 'functions');
     const functionFolders = fs.readdirSync(functionsPath);
 
     for (const folder of functionFolders) {
       const folderPath = path.join(functionsPath, folder);
-      const functionFiles = loadFiles(folderPath, ".js");
+      const functionFiles = loadFiles(folderPath, '.js');
       for (const file of functionFiles) {
         try {
           // Require and execute each function file, passing the client
@@ -55,7 +62,7 @@ const initializeFunctions = async () => {
     }
   } catch (error) {
     // Log errors that occur during function initialization
-    console.error("Error initializing functions:", error);
+    console.error('Error initializing functions:', error);
   }
 };
 
@@ -67,28 +74,43 @@ const initializeHandlers = async () => {
     await client.handleComponents();
   } catch (error) {
     // Log errors that occur during handler initialization
-    console.error("Error initializing handlers:", error);
+    console.error('Error initializing handlers:', error);
   }
 };
 
 // Main bot initialization function
 const initBot = async () => {
+  // Connect to MongoDB first so models are ready before events/commands
+  try {
+    await connectMongo();
+  } catch (err) {
+    console.error('Continuing without MongoDB due to connection error.');
+  }
   await initializeFunctions();
   await initializeHandlers();
   // Log in to Discord with the provided token
   client.login(token).catch((error) => {
-    console.error("Failed to log in:", error);
+    console.error('Failed to log in:', error);
   });
 };
 
 // Handle uncaught exceptions to prevent the bot from crashing silently
-process.on("uncaughtException", (err) => {
-  console.error("There was an uncaught error:", err);
+process.on('uncaughtException', (err) => {
+  console.error('There was an uncaught error:', err);
 });
 
 // Handle unhandled promise rejections for better error visibility
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Graceful shutdown for MongoDB and Discord
+process.on('SIGINT', async () => {
+  try {
+    await disconnectMongo();
+  } finally {
+    process.exit(0);
+  }
 });
 
 // Start the bot
