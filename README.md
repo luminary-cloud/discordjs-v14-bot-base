@@ -60,14 +60,15 @@ npm install
 
 ### 4. Run the Bot
 
-````bash
+```bash
 npm start
+```
 
 For development with auto-reload:
 
 ```bash
 npm run dev
-````
+```
 
 > Note: When `COMMANDS_SCOPE=global`, registering commands can take up to an hour to propagate. Use `guild` scope for faster iteration.
 
@@ -96,22 +97,18 @@ module.exports = model('User', userSchema);
 
 MongoDB connection is initialized before the bot logs in. If MongoDB is unavailable, the bot will continue to run but log the connection error.
 
-```
-
 ---
 
 ## 🛠️ Project Structure
 
 ```
-
 src/
-commands/ # Slash command files
-components/ # Buttons, select menus, modals
-events/ # Event handlers
-functions/ # Handler logic
-index.js # Bot entry point
-.env # Environment variables
-
+  commands/        # Slash command files
+  components/      # Buttons, select menus, modals
+  events/          # Event handlers
+  functions/       # Handler logic
+  index.js         # Bot entry point
+.env               # Environment variables
 ```
 
 ---
@@ -130,5 +127,3 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 > Made with ❤️ by cloud
-
-```
