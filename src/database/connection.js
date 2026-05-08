@@ -9,15 +9,11 @@ async function connectMongo() {
 
   mongoose.set('strictQuery', true);
 
-  // Improve stability in dev by enabling detailed logs
   const isDev = (NODE_ENV || '').toLowerCase() === 'development';
-  if (isDev) {
-    mongoose.set('debug', false);
-  }
 
   try {
     await mongoose.connect(MONGO_URI, {
-      autoIndex: !isDev ? false : true,
+      autoIndex: isDev,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -25,7 +21,7 @@ async function connectMongo() {
 
     const conn = mongoose.connection;
     conn.on('connected', () => {
-      console.log('📦 MongoDB connected');
+      console.log('MongoDB connected');
     });
     conn.on('error', (err) => {
       console.error('MongoDB connection error:', err);
@@ -44,7 +40,7 @@ async function connectMongo() {
 async function disconnectMongo() {
   try {
     await mongoose.disconnect();
-    console.log('📦 MongoDB disconnected cleanly');
+    console.log('MongoDB disconnected cleanly');
   } catch (err) {
     console.error('Error during MongoDB disconnect:', err);
   }

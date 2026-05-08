@@ -1,16 +1,17 @@
 {
   "name": "discordjs-v14-bot-base",
   "version": "1.4.0",
-  "description": "🚀 A powerful Discord.js v14 bot handler base to kickstart your bot development!",
-  "author": "minuscloud",
+  "description": "Discord.js v14 bot starter with command, event, and component handlers.",
+  "main": "src/index.js",
+  "author": "luminary-cloud",
   "license": "MIT",
-  "homepage": "https://github.com/minuscloud/discordjs-v14-bot-base#readme",
+  "homepage": "https://github.com/luminary-cloud/discordjs-v14-bot-base#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/minuscloud/discordjs-v14-bot-base.git"
+    "url": "https://github.com/luminary-cloud/discordjs-v14-bot-base.git"
   },
   "bugs": {
-    "url": "https://github.com/minuscloud/discordjs-v14-bot-base/issues"
+    "url": "https://github.com/luminary-cloud/discordjs-v14-bot-base/issues"
   },
   "keywords": [
     "discord",

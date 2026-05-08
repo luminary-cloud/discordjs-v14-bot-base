@@ -1,90 +1,129 @@
-# Discord.js v14 Bot Base
+# discordjs-v14-bot-base
 
-A simple, easy-to-use bot base for building **Discord Bots** with [Discord.js v14](https://discord.js.org/).
+A Discord.js v14 starter with command, event, and component handlers. Drop in slash commands, buttons, select menus, and modals as separate files; the loader picks them up on boot.
 
-This template comes with ready-to-use **command**, **event**, and **component handlers**, allowing you to easily create a bot that supports:
+## Quick start
 
-- 🟢 Slash Commands
-- 🟦 Buttons
-- 🟣 Select Menus
-- 🟡 Autocompletion
-- 🟠 Modals
+1. Clone the repo.
 
-The modular structure of this base makes it easy to extend with your own custom features!
+   ```
+   git clone https://github.com/luminary-cloud/discordjs-v14-bot-base.git
+   cd discordjs-v14-bot-base
+   ```
 
----
+2. Copy the env template and fill in your bot's token and client ID from the [Discord Developer Portal](https://discord.com/developers/applications).
 
-## ✨ Features
+   ```
+   cp .env.example .env
+   ```
 
-- **Slash Commands**: Easily register and manage your bot’s commands.
-- **Buttons**: Implement interactive buttons in your bot’s messages.
-- **Select Menus**: Add select menus for better user interaction.
-- **Modals**: Display modals for custom inputs.
-- **Autocompletion**: Provide users with dynamic command suggestions.
+3. Install dependencies.
 
----
+   ```
+   npm install
+   ```
 
-## 🚀 Getting Started
+4. Run the bot.
 
-### 1. Clone the Repository
+   ```
+   npm run dev      # auto-reload via nodemon
+   npm start        # plain node
+   ```
 
-```bash
-git clone https://github.com/minuscloud/discordjs-v14-bot-base.git
-cd discordjs-v14-bot-base
+   On first boot you'll see the command, event, and component loaders log every file they pick up, then a "Bot ready" banner.
+
+## Configuration
+
+All configuration lives in `.env`. `token` and `clientId` are required; everything else has a sensible default.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `token` | yes | | Bot token from the Developer Portal. |
+| `clientId` | yes | | Application ID of your bot. |
+| `COMMANDS_SCOPE` | no | `global` | `global` registers commands across every guild your bot is in. `guild` registers them only in `GUILD_ID`. |
+| `GUILD_ID` | only when `COMMANDS_SCOPE=guild` | | Guild ID to register commands in. |
+| `MONGO_URI` | no | | MongoDB connection string. If unset or unreachable, the bot runs without database features. |
+| `NODE_ENV` | no | | `development` enables Mongoose `autoIndex`. |
+
+Required Node version: 18 or newer.
+
+## Project layout
+
+```
+src/
+  index.js                       Entry point. Connects Mongo, loads handlers, logs in.
+  commands/
+    admin/                       Admin-gated slash commands (Administrator permission).
+    public/                      Public slash commands.
+  components/
+    buttons/                     Button interaction handlers.
+    selectMenus/                 String select menu handlers.
+    modalMenus/                  Modal submit handlers.
+  events/
+    client/                      discord.js client events. Drop new events here.
+  functions/
+    handlers/                    Loader code: handleCommands, handleEvents, handleComponents.
+  database/
+    connection.js                Mongoose connect/disconnect wrappers.
+    models/                      Mongoose schemas.
 ```
 
-### 2. Configure Environment Variables
+The loader is flat-per-folder. Each handler reads its directory, requires every `.js` file, and registers the export. Subfolders inside `commands/`, `components/`, or `events/` other than the categories above are not traversed.
 
-Copy `.env.example` to `.env` and fill in your values:
+## Adding a slash command
 
-```env
-# .env
-token=YOUR_BOT_TOKEN
-clientId=YOUR_APPLICATION_CLIENT_ID
-COMMANDS_SCOPE=global
-# If using guild scope, set:
-# GUILD_ID=YOUR_GUILD_ID
-
-# MongoDB connection
-MONGO_URI=mongodb://localhost:27017/discord-bot
-NODE_ENV=development
-```
-
-You can find `token` and `clientId` in the [Discord Developer Portal](https://discord.com/developers/applications). Set `COMMANDS_SCOPE` to `guild` during development to avoid global registration delays; switch to `global` for production.
-
-### 3. Install Dependencies
-
-```bash
-npm install
-```
-
-### 4. Run the Bot
-
-```bash
-npm start
-```
-
-For development with auto-reload:
-
-```bash
-npm run dev
-```
-
-> Note: When `COMMANDS_SCOPE=global`, registering commands can take up to an hour to propagate. Use `guild` scope for faster iteration.
-
----
-
-## 🗃️ MongoDB Setup
-
-This base includes a minimal MongoDB setup using **Mongoose**.
-
-- Connection code: `src/database/connection.js`
-- Models folder: `src/database/models`
-
-Create your models in `src/database/models`:
+Drop a file in `src/commands/public/` (or `admin/` for admin-only):
 
 ```js
-// src/database/models/User.js
+const { SlashCommandBuilder } = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Replies with pong'),
+  async execute(interaction, client) {
+    await interaction.reply('Pong.');
+  },
+};
+```
+
+Restart the bot (or save while `npm run dev` is running). The loader picks it up and registers it with Discord on boot.
+
+## Adding a button, select menu, or modal
+
+Two pieces: the slash command that produces the component, and the handler file that responds to it.
+
+The handler file goes in `src/components/buttons/`, `selectMenus/`, or `modalMenus/`. It exports `data.name` and `execute`:
+
+```js
+const { MessageFlags } = require('discord.js');
+
+module.exports = {
+  data: { name: 'my-button' },
+  async execute(interaction, client, args) {
+    await interaction.reply({
+      content: 'Clicked.',
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};
+```
+
+In the slash command that builds the component, set `customId` to match `data.name`. See `src/commands/admin/testbuttons.js` for a wired-up example.
+
+### Custom ID routing
+
+`interactionCreate.js` parses every component `customId` as `base:arg1:arg2:...`. The base routes to the handler with the matching `data.name`; the args become the third parameter of `execute` and are also attached to `interaction.customIdArgs`.
+
+Example: a button with `customId = 'my-button:42:foo'` invokes the `my-button` handler with `args = ['42', 'foo']`. Useful for parameterizing handlers without a separate state map.
+
+## MongoDB
+
+Optional. Set `MONGO_URI` and the bot connects on boot. If the connection fails, the bot logs the error and keeps running without database features.
+
+Mongoose schemas go in `src/database/models/`. A minimal example:
+
+```js
 const { Schema, model } = require('mongoose');
 
 const userSchema = new Schema({
@@ -95,35 +134,14 @@ const userSchema = new Schema({
 module.exports = model('User', userSchema);
 ```
 
-MongoDB connection is initialized before the bot logs in. If MongoDB is unavailable, the bot will continue to run but log the connection error.
+`autoIndex` is on when `NODE_ENV=development` and off otherwise.
 
----
+## Why guild vs global commands
 
-## 🛠️ Project Structure
+Discord caches global slash command definitions for up to an hour, so changes don't show up in the client immediately. Guild-scoped commands update instantly.
 
-```
-src/
-  commands/        # Slash command files
-  components/      # Buttons, select menus, modals
-  events/          # Event handlers
-  functions/       # Handler logic
-  index.js         # Bot entry point
-.env               # Environment variables
-```
+Use `COMMANDS_SCOPE=guild` with a test `GUILD_ID` while iterating, then switch to `global` for production. The handler picks the right `Routes` endpoint at boot (`applicationGuildCommands` or `applicationCommands`).
 
----
+## License
 
-## 📝 Contributing
-
-Contributions are always welcome!
-If you have suggestions, feature requests, or bug fixes, feel free to open an [issue](https://github.com/minuscloud/discordjs-v14-bot-base/issues) or a pull request.
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-> Made with ❤️ by cloud
+[MIT](LICENSE).
